@@ -66,7 +66,7 @@ This command is quite comprehensive and sets up a minimal ARM system for emulati
 
 By running, although it will not do anything except crashing with a message like  `qemu-system-arm: Trying to execute code outside RAM or ROM at 0x04000000`.
 
-### The first hang
+### The first hang:
 
 ```
 ldr r2, str1
@@ -110,6 +110,63 @@ To convert the ELF file to a raw binary dump, use the following command:
 ```
 
 We've successfully transformed the `startup.s` assembly code into an executable format for an ARM CPU. Starting with assembling the code using `arm-none-eabi-as` to create `startup.o`, we then linked it with `arm-none-eabi-ld` to produce `startup.elf`, even though it gave a warning about a missing `_start` symbol which we ignored as we only needed the ELF file temporarily. To convert it into a raw binary dump, we used `arm-none-eabi-objcopy` with the `-O binary` option, resulting in `first-hang.bin`, a 12-byte file containing the assembly instructions and data. While matching bytes to assembly instructions in a hexdump is atypical, it illustrates the process of generating executable code for ARM architecture, crucial for bare-metal programming.
+
+
+### And. . . Blastoff!:
+
+Run code on `ARM machine`:
+```
+qemu-system-arm -M vexpress-a9 -m 32M -no-reboot -nographic -monitor telnet:127.0.0.1:1234,server,nowait -kernel first-hang.bin
+```
+
+qemu-system-arm: This is the command to start the QEMU emulator for ARM systems.
+
+-M vexpress-a9: This option specifies the machine type to emulate. vexpress-a9 is an ARM Versatile Express development board with a Cortex-A9 CPU.
+
+-m 32M: This sets the memory size for the emulated machine to 32 megabytes.
+
+-no-reboot: This tells QEMU not to reboot the machine after it shuts down. This can be useful for debugging purposes.
+
+-nographic: This disables graphical output so that the output goes to the terminal instead. It is useful for running QEMU in environments where you don't need a graphical interface.
+
+-monitor telnet:127.0.0.1:1234,server,nowait: This option sets up a QEMU monitor (a command-line interface for interacting with the emulator) that listens on port 1234 of the localhost (127.0.0.1). The server option makes QEMU wait for incoming connections, and nowait allows QEMU to continue running even if there is no connection.
+
+-kernel first-hang.bin: This specifies the kernel file to load. first-hang.bin is the binary file of the kernel you want to run on the emulated ARM machine.
+
+```
+ QEMU 2.8.1 monitor - type 'help' for more information
+```
+
+At the (qemu) prompt, type info registers. This command shows the current state of the CPU registers. You should see an output listing all the registers and their values. Look for the register R2 near the beginning of the output, and you should spot our 0xDEADBEEF constant loaded into it.
+
+```
+R00=00000000 R01=000008e0 R02=deadbeef R03=00000000
+```
+
+We have our first register write and hang.
+
+### Memory mappings:
+
+The system don't know the start address where we want, it begins executing from address 0x0.
+
+```
+ str1: .word 0xDEADBEEF
+```
+```
+ldr r2,str1
+```
+```
+b .
+```
+
+
+
+
+
+
+
+
+
 
 
 
